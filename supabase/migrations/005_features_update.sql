@@ -181,6 +181,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_country_code VARCHAR(10);
 ALTER TABLE registration_requests ADD COLUMN IF NOT EXISTS country_code VARCHAR(2);
 ALTER TABLE registration_requests ADD COLUMN IF NOT EXISTS city VARCHAR(100);
 ALTER TABLE registration_requests ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE registration_requests ADD COLUMN IF NOT EXISTS desired_duration_months INTEGER; -- Durée souhaitée pour tontine à terme
 
 -- ============================================
 -- 3. FRAIS ET BÉNÉFICES TONTINIER

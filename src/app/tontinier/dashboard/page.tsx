@@ -6,27 +6,37 @@ import { DashboardLayout } from '@/components/layout';
 import { StatCard, Card, CardHeader, CardTitle, Loading, Badge, Avatar } from '@/components/common';
 import { useAuth } from '@/contexts/AuthContext';
 import { userService } from '@/services/user';
+import { earningsService } from '@/services/earnings';
 import { formatCurrency, formatNumber, getDaysRemaining, ACCOUNT_STATUSES } from '@/utils';
 import type { TontinierStats } from '@/types';
-import { Users, Wallet, TrendingUp, TrendingDown, Clock, AlertTriangle, CheckCircle2, FileText, Phone, MessageCircle } from 'lucide-react';
+import type { EarningsSummary } from '@/types/features';
+import { Users, Wallet, TrendingUp, TrendingDown, Clock, AlertTriangle, CheckCircle2, FileText, Phone, MessageCircle, DollarSign, PiggyBank } from 'lucide-react';
 import { ADMIN_CONTACT } from '@/types';
 
 export default function TontinierDashboardPage() {
   const { user } = useAuth();
   const [stats, setStats] = useState<TontinierStats | null>(null);
+  const [earningsSummary, setEarningsSummary] = useState<EarningsSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       if (user) {
-        const result = await userService.getTontinierStats(user.id);
-        if (result.success && result.data) {
-          setStats(result.data);
+        const [statsResult, earningsResult] = await Promise.all([
+          userService.getTontinierStats(user.id),
+          earningsService.getEarningsSummary(user.id),
+        ]);
+        
+        if (statsResult.success && statsResult.data) {
+          setStats(statsResult.data);
+        }
+        if (earningsResult.success && earningsResult.summary) {
+          setEarningsSummary(earningsResult.summary);
         }
       }
       setIsLoading(false);
     };
-    fetchStats();
+    fetchData();
   }, [user]);
 
   if (isLoading) {
@@ -81,18 +91,55 @@ export default function TontinierDashboardPage() {
 
       <div className="stats-grid mb-8">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}>
-          <StatCard title="Total Collecté" value={formatCurrency(stats?.total_collected || 0)} icon={<TrendingUp className="w-6 h-6" />} variant="success" />
+          <StatCard title="Mes Bénéfices" value={formatCurrency(earningsSummary?.total_earnings || 0)} icon={<DollarSign className="w-6 h-6" />} variant="success" trend={{ value: 0, isPositive: true }} />
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <StatCard title="Total Retiré" value={formatCurrency(stats?.total_withdrawn || 0)} icon={<TrendingDown className="w-6 h-6" />} variant="warning" />
+          <StatCard title="Total Collecté" value={formatCurrency(stats?.total_collected || 0)} icon={<TrendingUp className="w-6 h-6" />} variant="primary" />
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <StatCard title="Mes Clients" value={formatNumber(stats?.total_clients || 0)} description={`${stats?.active_clients || 0} actifs`} icon={<Users className="w-6 h-6" />} variant="primary" />
+          <StatCard title="Mes Clients" value={formatNumber(stats?.total_clients || 0)} description={`${stats?.active_clients || 0} actifs`} icon={<Users className="w-6 h-6" />} variant="secondary" />
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <StatCard title="Mes Tontines" value={formatNumber(stats?.total_tontines || 0)} description={`${stats?.active_tontines || 0} actives`} icon={<Wallet className="w-6 h-6" />} variant="secondary" />
+          <StatCard title="Mes Tontines" value={formatNumber(stats?.total_tontines || 0)} description={`${stats?.active_tontines || 0} actives`} icon={<Wallet className="w-6 h-6" />} variant="warning" />
         </motion.div>
       </div>
+
+      {/* Détail des bénéfices */}
+      {earningsSummary && earningsSummary.total_earnings > 0 && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PiggyBank className="w-5 h-5 text-success-500" />
+                Détail des Bénéfices
+              </CardTitle>
+            </CardHeader>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                <p className="text-xs text-dark-500 mb-1">Classiques</p>
+                <p className="text-lg font-bold text-blue-600">{formatCurrency(earningsSummary.earnings_classique)}</p>
+              </div>
+              <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-xl">
+                <p className="text-xs text-dark-500 mb-1">Flexibles</p>
+                <p className="text-lg font-bold text-green-600">{formatCurrency(earningsSummary.earnings_flexible)}</p>
+              </div>
+              <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
+                <p className="text-xs text-dark-500 mb-1">À terme</p>
+                <p className="text-lg font-bold text-purple-600">{formatCurrency(earningsSummary.earnings_terme)}</p>
+              </div>
+              <div className="text-center p-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl">
+                <p className="text-xs text-dark-500 mb-1">Tontines</p>
+                <p className="text-lg font-bold text-orange-600">{earningsSummary.tontines_count}</p>
+              </div>
+            </div>
+            <div className="mt-4 text-center">
+              <a href="/tontinier/earnings" className="text-sm text-primary-500 hover:underline">
+                Voir le détail complet →
+              </a>
+            </div>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Pending transactions alert */}
       {stats && (stats.pending_deposits > 0 || stats.pending_withdrawals > 0) && (
@@ -117,6 +164,12 @@ export default function TontinierDashboardPage() {
         <Card>
           <CardHeader><CardTitle>Actions rapides</CardTitle></CardHeader>
           <div className="grid grid-cols-2 gap-4">
+            <a href="/tontinier/earnings" className="flex flex-col items-center gap-2 p-4 rounded-xl bg-dark-50 dark:bg-dark-800 hover:bg-success-50 dark:hover:bg-success-900/20 transition-colors group">
+              <div className="w-12 h-12 rounded-xl bg-success-100 dark:bg-success-900/30 flex items-center justify-center text-success-600 group-hover:bg-success-500 group-hover:text-white transition-colors">
+                <DollarSign className="w-6 h-6" />
+              </div>
+              <span className="text-sm font-medium text-dark-700 dark:text-dark-300">Mes bénéfices</span>
+            </a>
             <a href="/tontinier/clients" className="flex flex-col items-center gap-2 p-4 rounded-xl bg-dark-50 dark:bg-dark-800 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors group">
               <div className="w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 group-hover:bg-primary-500 group-hover:text-white transition-colors">
                 <Users className="w-6 h-6" />
@@ -129,20 +182,14 @@ export default function TontinierDashboardPage() {
               </div>
               <span className="text-sm font-medium text-dark-700 dark:text-dark-300">Mes tontines</span>
             </a>
-            <a href="/tontinier/transactions" className="flex flex-col items-center gap-2 p-4 rounded-xl bg-dark-50 dark:bg-dark-800 hover:bg-success-50 dark:hover:bg-success-900/20 transition-colors group">
-              <div className="w-12 h-12 rounded-xl bg-success-50 dark:bg-success-900/30 flex items-center justify-center text-success-600 group-hover:bg-success-500 group-hover:text-white transition-colors">
+            <a href="/tontinier/transactions" className="flex flex-col items-center gap-2 p-4 rounded-xl bg-dark-50 dark:bg-dark-800 hover:bg-warning-50 dark:hover:bg-warning-900/20 transition-colors group">
+              <div className="w-12 h-12 rounded-xl bg-warning-50 dark:bg-warning-900/30 flex items-center justify-center text-warning-600 group-hover:bg-warning-500 group-hover:text-white transition-colors">
                 <FileText className="w-6 h-6" />
               </div>
               <span className="text-sm font-medium text-dark-700 dark:text-dark-300">Transactions</span>
               {stats && (stats.pending_deposits > 0 || stats.pending_withdrawals > 0) && (
                 <Badge variant="danger" size="sm">{(stats.pending_deposits || 0) + (stats.pending_withdrawals || 0)}</Badge>
               )}
-            </a>
-            <a href="/tontinier/account" className="flex flex-col items-center gap-2 p-4 rounded-xl bg-dark-50 dark:bg-dark-800 hover:bg-warning-50 dark:hover:bg-warning-900/20 transition-colors group">
-              <div className="w-12 h-12 rounded-xl bg-warning-50 dark:bg-warning-900/30 flex items-center justify-center text-warning-600 group-hover:bg-warning-500 group-hover:text-white transition-colors">
-                <Clock className="w-6 h-6" />
-              </div>
-              <span className="text-sm font-medium text-dark-700 dark:text-dark-300">Mon compte</span>
             </a>
           </div>
         </Card>

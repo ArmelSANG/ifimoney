@@ -7,6 +7,7 @@ import type {
   PaginationParams,
   SearchFilters,
 } from '@/types';
+import { TONTINE_CONFIG } from '@/types/features';
 
 export const tontineService = {
   // Vérifier la disponibilité d'un identifiant
@@ -33,6 +34,14 @@ export const tontineService = {
     tontinierId: string
   ): Promise<{ success: boolean; tontine?: Tontine; error?: string }> {
     try {
+      // Validation du montant minimum
+      if (data.mise < TONTINE_CONFIG.MIN_MISE) {
+        return { 
+          success: false, 
+          error: `Le montant minimum d'une mise est de ${TONTINE_CONFIG.MIN_MISE} F` 
+        };
+      }
+
       // Générer ou utiliser l'identifiant fourni
       let identifier = data.identifier;
       if (!identifier) {
@@ -68,6 +77,8 @@ export const tontineService = {
           start_date: data.start_date,
           end_date: data.end_date,
           cycle_days: data.cycle_days,
+          duration_months: data.duration_months,
+          duration_validated: data.type === 'terme' ? true : null, // Validé par le tontinier à la création
           tontinier_id: tontinierId,
           status: 'active',
           total_collected: 0,

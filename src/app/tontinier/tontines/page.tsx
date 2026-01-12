@@ -24,14 +24,20 @@ import {
   CheckCircle2, XCircle, Loader2,
 } from 'lucide-react';
 
+import { TONTINE_CONFIG } from '@/types/features';
+
 const tontineSchema = z.object({
   name: z.string().min(2, 'Nom requis (min 2 caractères)'),
   description: z.string().optional(),
   type: z.enum(['classique', 'flexible', 'terme']),
-  mise: z.string().min(1, 'Mise requise'),
+  mise: z.string().min(1, 'Mise requise').refine(
+    (val) => parseFloat(val) >= TONTINE_CONFIG.MIN_MISE,
+    `Le montant minimum est de ${TONTINE_CONFIG.MIN_MISE} F`
+  ),
   cycle_days: z.string().min(1, 'Périodicité requise'),
   start_date: z.string().min(1, 'Date de début requise'),
   end_date: z.string().optional(),
+  duration_months: z.string().optional(), // Durée en mois pour tontine à terme
   identifier: z.string().optional(),
 });
 
@@ -131,6 +137,7 @@ export default function TontinierTontinesPage() {
           cycle_days: parseInt(data.cycle_days),
           start_date: data.start_date,
           end_date: data.type === 'terme' ? data.end_date : undefined,
+          duration_months: data.type === 'terme' && data.duration_months ? parseInt(data.duration_months) : undefined,
           identifier: customIdentifier || undefined,
         },
         user.id
@@ -336,6 +343,17 @@ export default function TontinierTontinesPage() {
               />
             )}
           </div>
+
+          {watchType === 'terme' && (
+            <Input
+              label="Durée du contrat (mois)"
+              type="number"
+              placeholder="Ex: 6"
+              leftIcon={<Clock className="w-5 h-5" />}
+              helperText="Aucun retrait possible avant cette durée"
+              {...form.register('duration_months')}
+            />
+          )}
 
           {/* Identifiant personnalisé */}
           <div className="p-4 rounded-xl bg-dark-50 dark:bg-dark-800 space-y-3">

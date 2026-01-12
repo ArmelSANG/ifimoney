@@ -7,16 +7,17 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Button, Input, Select, Card, AddressSelector } from '@/components/common';
-import type { Address } from '@/types/features';
+import { Button, Input, Select, Card, AddressSelector, PhoneInput } from '@/components/common';
+import type { Address, PhoneValidation } from '@/types/features';
 import { registrationService } from '@/services/registration';
+import { imageService } from '@/services/image';
 import { IDENTITY_DOC_TYPES, TONTINE_TYPES } from '@/utils';
 import {
   CircleDollarSign,
   ArrowLeft,
   ArrowRight,
   User,
-  Phone,
+  Phone as PhoneIcon,
   Upload,
   FileText,
   Target,
@@ -42,6 +43,7 @@ const clientSchema = z.object({
   address: z.string().min(5, 'Adresse requise'),
   desired_tontine_type: z.enum(['classique', 'flexible', 'terme']).optional(),
   desired_mise: z.string().optional(),
+  desired_duration_months: z.string().optional(), // Durée souhaitée pour tontine à terme
   desired_objective: z.string().optional(),
 });
 
@@ -58,6 +60,13 @@ export default function RegisterPage() {
   const [identityDoc, setIdentityDoc] = useState<File | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [addressData, setAddressData] = useState<Partial<Address>>({});
+  
+  // États pour la validation du téléphone
+  const [phoneData, setPhoneData] = useState<{
+    phone: string;
+    countryCode: string;
+    validation: PhoneValidation | null;
+  }>({ phone: '', countryCode: 'BJ', validation: null });
 
   const tontinierForm = useForm<TontinierFormData>({
     resolver: zodResolver(tontinierSchema),
@@ -67,25 +76,62 @@ export default function RegisterPage() {
     resolver: zodResolver(clientSchema),
   });
 
-  const handleProfilePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Gérer le changement de numéro de téléphone
+  const handlePhoneChange = (phone: string, countryCode: string, validation: PhoneValidation) => {
+    setPhoneData({ phone, countryCode, validation });
+    // Mettre à jour le formulaire avec le numéro formaté E.164
+    if (validation.isValid) {
+      if (accountType === 'tontinier') {
+        tontinierForm.setValue('whatsapp', validation.formatted);
+      } else {
+        clientForm.setValue('whatsapp', validation.formatted);
+      }
+    }
+  };
+
+  const handleProfilePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
         toast.error('La photo ne doit pas dépasser 5 Mo');
         return;
       }
-      setProfilePhoto(file);
+      
+      // Compression automatique de l'image
+      toast.loading('Optimisation de l\'image...', { id: 'compress-profile' });
+      const result = await imageService.compressProfilePhoto(file);
+      toast.dismiss('compress-profile');
+      
+      if (result.success && result.file) {
+        setProfilePhoto(result.file);
+        toast.success(`Image optimisée: ${imageService.formatFileSize(result.file.size)}`);
+      } else {
+        // Si la compression échoue, utiliser l'original
+        setProfilePhoto(file);
+      }
     }
   };
 
-  const handleIdentityDocChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleIdentityDocChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 10 * 1024 * 1024) {
         toast.error('Le document ne doit pas dépasser 10 Mo');
         return;
       }
-      setIdentityDoc(file);
+      
+      // Compression automatique du document
+      toast.loading('Optimisation du document...', { id: 'compress-doc' });
+      const result = await imageService.compressIdentityDocument(file);
+      toast.dismiss('compress-doc');
+      
+      if (result.success && result.file) {
+        setIdentityDoc(result.file);
+        toast.success(`Document optimisé: ${imageService.formatFileSize(result.file.size)}`);
+      } else {
+        // Si la compression échoue, utiliser l'original
+        setIdentityDoc(file);
+      }
     }
   };
 
@@ -102,11 +148,15 @@ export default function RegisterPage() {
       toast.error('Veuillez compléter votre adresse');
       return;
     }
+    if (!phoneData.validation?.isValid) {
+      toast.error('Veuillez entrer un numéro de téléphone valide');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
       const result = await registrationService.submitTontinierRequest({
-        whatsapp: data.whatsapp,
+        whatsapp: phoneData.validation.formatted, // Utiliser le format E.164
         full_name: data.full_name,
         profile_photo: profilePhoto,
         identity_doc_type: data.identity_doc_type,
@@ -135,11 +185,15 @@ export default function RegisterPage() {
       toast.error('Veuillez compléter votre adresse');
       return;
     }
+    if (!phoneData.validation?.isValid) {
+      toast.error('Veuillez entrer un numéro de téléphone valide');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
       const result = await registrationService.submitClientRequest({
-        whatsapp: data.whatsapp,
+        whatsapp: phoneData.validation.formatted, // Utiliser le format E.164
         full_name: data.full_name,
         profile_photo: profilePhoto,
         country_code: addressData.country_code,
@@ -147,6 +201,7 @@ export default function RegisterPage() {
         address: addressData.address || '',
         desired_tontine_type: data.desired_tontine_type as 'classique' | 'flexible' | 'terme' | undefined,
         desired_mise: data.desired_mise ? parseFloat(data.desired_mise) : undefined,
+        desired_duration_months: data.desired_duration_months ? parseInt(data.desired_duration_months) : undefined,
         desired_objective: data.desired_objective,
       });
 
@@ -312,12 +367,13 @@ export default function RegisterPage() {
                   {...tontinierForm.register('full_name')}
                 />
 
-                <Input
+                <PhoneInput
                   label="Numéro WhatsApp"
-                  placeholder="Ex: +22967455462"
-                  leftIcon={<Phone className="w-5 h-5" />}
+                  value={phoneData.phone}
+                  countryCode={phoneData.countryCode}
+                  onChange={handlePhoneChange}
+                  required
                   error={tontinierForm.formState.errors.whatsapp?.message}
-                  {...tontinierForm.register('whatsapp')}
                 />
 
                 <div>
@@ -407,12 +463,13 @@ export default function RegisterPage() {
                   {...clientForm.register('full_name')}
                 />
 
-                <Input
+                <PhoneInput
                   label="Numéro WhatsApp"
-                  placeholder="Ex: +22967455462"
-                  leftIcon={<Phone className="w-5 h-5" />}
+                  value={phoneData.phone}
+                  countryCode={phoneData.countryCode}
+                  onChange={handlePhoneChange}
+                  required
                   error={clientForm.formState.errors.whatsapp?.message}
-                  {...clientForm.register('whatsapp')}
                 />
 
                 <div>
@@ -458,6 +515,16 @@ export default function RegisterPage() {
                   helperText="Montant en XOF"
                   {...clientForm.register('desired_mise')}
                 />
+
+                {clientForm.watch('desired_tontine_type') === 'terme' && (
+                  <Input
+                    label="Durée souhaitée (mois)"
+                    placeholder="Ex: 6"
+                    type="number"
+                    helperText="Nombre de mois avant retrait possible"
+                    {...clientForm.register('desired_duration_months')}
+                  />
+                )}
 
                 <Input
                   label="Objectif d'épargne (optionnel)"

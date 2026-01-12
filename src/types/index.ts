@@ -343,6 +343,7 @@ export interface ClientRegistrationFormData {
   address: string;
   desired_tontine_type?: TontineType;
   desired_mise?: number;
+  desired_duration_months?: number; // Durée souhaitée pour tontine à terme
   desired_objective?: string;
 }
 
@@ -354,6 +355,7 @@ export interface TontineFormData {
   cycle_days: number;
   start_date: string;
   end_date?: string;
+  duration_months?: number; // Durée en mois pour tontine à terme
   identifier?: string;
 }
 

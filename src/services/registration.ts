@@ -88,6 +88,7 @@ export const registrationService = {
           address: data.address,
           desired_tontine_type: data.desired_tontine_type,
           desired_mise: data.desired_mise,
+          desired_duration_months: data.desired_duration_months,
           desired_objective: data.desired_objective,
           status: 'pending',
         });

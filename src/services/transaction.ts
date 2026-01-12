@@ -7,6 +7,7 @@ import type {
   PaginationParams,
   SearchFilters,
 } from '@/types';
+import { TONTINE_CONFIG } from '@/types/features';
 
 export const transactionService = {
   // Créer un dépôt (client ou tontinier)
@@ -17,6 +18,14 @@ export const transactionService = {
     tontinierId: string
   ): Promise<{ success: boolean; transaction?: Transaction; error?: string }> {
     try {
+      // Validation du montant minimum
+      if (data.amount < TONTINE_CONFIG.MIN_MISE) {
+        return { 
+          success: false, 
+          error: `Le montant minimum est de ${TONTINE_CONFIG.MIN_MISE} F` 
+        };
+      }
+
       let proofUrl: string | undefined;
 
       // Upload de la preuve si paiement en ligne
@@ -100,21 +109,38 @@ export const transactionService = {
         }
       }
 
-      // Vérifier le solde disponible
-      const { data: participation } = await supabase
-        .from('tontine_participations')
-        .select('total_deposited, total_withdrawn')
-        .eq('tontine_id', tontineId)
-        .eq('client_id', clientId)
-        .single();
+      // Vérifier les avoirs nets disponibles (après déduction des frais réservés)
+      const { data: netAvailable, error: netError } = await supabase.rpc('calculate_net_available', {
+        p_tontine_id: tontineId,
+        p_client_id: clientId,
+      });
 
-      if (!participation) {
-        return { success: false, error: 'Participation non trouvée' };
-      }
+      if (netError) {
+        // Fallback: calcul simple si la fonction RPC n'existe pas
+        const { data: participation } = await supabase
+          .from('tontine_participations')
+          .select('total_deposited, total_withdrawn')
+          .eq('tontine_id', tontineId)
+          .eq('client_id', clientId)
+          .single();
 
-      const balance = participation.total_deposited - participation.total_withdrawn;
-      if (data.amount > balance) {
-        return { success: false, error: `Solde insuffisant. Disponible: ${balance} XOF` };
+        if (!participation) {
+          return { success: false, error: 'Participation non trouvée' };
+        }
+
+        const balance = participation.total_deposited - participation.total_withdrawn;
+        if (data.amount > balance) {
+          return { success: false, error: `Solde insuffisant. Disponible: ${balance} XOF` };
+        }
+      } else {
+        // Utiliser les avoirs nets (avec frais réservés déduits)
+        const availableAmount = netAvailable || 0;
+        if (data.amount > availableAmount) {
+          return { 
+            success: false, 
+            error: `Montant supérieur aux avoirs disponibles. Maximum: ${availableAmount} XOF (frais réservés déduits)` 
+          };
+        }
       }
 
       const { data: transaction, error } = await supabase
