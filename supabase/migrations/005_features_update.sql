@@ -636,7 +636,7 @@ UPDATE cgu SET content = '
 
 <h3>Article 10 - Contact</h3>
 <p>Pour toute question : IFIAAS au <strong>+229 67 45 54 62</strong> ou <strong>services.ifiaas@gmail.com</strong></p>
-', version = '2.0', updated_at = NOW()
+', version = '2.0'
 WHERE is_active = TRUE;
 
 -- ============================================

@@ -45,6 +45,9 @@ export const registrationService = {
           role: 'tontinier',
           identity_doc_type: data.identity_doc_type,
           identity_doc_url: identityDocData.publicUrl,
+          country_code: data.country_code,
+          city: data.city,
+          address: data.address,
           status: 'pending',
         });
 
@@ -80,6 +83,9 @@ export const registrationService = {
           full_name: data.full_name,
           profile_photo_url: profilePhotoData.publicUrl,
           role: 'client',
+          country_code: data.country_code,
+          city: data.city,
+          address: data.address,
           desired_tontine_type: data.desired_tontine_type,
           desired_mise: data.desired_mise,
           desired_objective: data.desired_objective,

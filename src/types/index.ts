@@ -329,12 +329,18 @@ export interface TontinierRegistrationFormData {
   profile_photo: File;
   identity_doc_type: IdentityDocType;
   identity_doc: File;
+  country_code: string;
+  city: string;
+  address: string;
 }
 
 export interface ClientRegistrationFormData {
   whatsapp: string;
   full_name: string;
   profile_photo: File;
+  country_code: string;
+  city: string;
+  address: string;
   desired_tontine_type?: TontineType;
   desired_mise?: number;
   desired_objective?: string;

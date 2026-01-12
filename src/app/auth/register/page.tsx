@@ -7,7 +7,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Button, Input, Select, Card } from '@/components/common';
+import { Button, Input, Select, Card, AddressSelector } from '@/components/common';
+import type { Address } from '@/types/features';
 import { registrationService } from '@/services/registration';
 import { IDENTITY_DOC_TYPES, TONTINE_TYPES } from '@/utils';
 import {
@@ -28,11 +29,17 @@ const tontinierSchema = z.object({
   whatsapp: z.string().min(8, 'Numéro WhatsApp invalide'),
   full_name: z.string().min(2, 'Nom complet requis'),
   identity_doc_type: z.enum(['cni', 'passport', 'permis', 'carte_consulaire']),
+  country_code: z.string().min(2, 'Pays requis'),
+  city: z.string().min(2, 'Ville requise'),
+  address: z.string().min(5, 'Adresse requise'),
 });
 
 const clientSchema = z.object({
   whatsapp: z.string().min(8, 'Numéro WhatsApp invalide'),
   full_name: z.string().min(2, 'Nom complet requis'),
+  country_code: z.string().min(2, 'Pays requis'),
+  city: z.string().min(2, 'Ville requise'),
+  address: z.string().min(5, 'Adresse requise'),
   desired_tontine_type: z.enum(['classique', 'flexible', 'terme']).optional(),
   desired_mise: z.string().optional(),
   desired_objective: z.string().optional(),
@@ -50,6 +57,7 @@ export default function RegisterPage() {
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
   const [identityDoc, setIdentityDoc] = useState<File | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [addressData, setAddressData] = useState<Partial<Address>>({});
 
   const tontinierForm = useForm<TontinierFormData>({
     resolver: zodResolver(tontinierSchema),
@@ -90,6 +98,10 @@ export default function RegisterPage() {
       toast.error('Veuillez ajouter une photo de votre pièce d\'identité');
       return;
     }
+    if (!addressData.country_code || !addressData.city) {
+      toast.error('Veuillez compléter votre adresse');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -99,6 +111,9 @@ export default function RegisterPage() {
         profile_photo: profilePhoto,
         identity_doc_type: data.identity_doc_type,
         identity_doc: identityDoc,
+        country_code: addressData.country_code,
+        city: addressData.city,
+        address: addressData.address || '',
       });
 
       if (result.success) {
@@ -116,6 +131,10 @@ export default function RegisterPage() {
       toast.error('Veuillez ajouter une photo de profil');
       return;
     }
+    if (!addressData.country_code || !addressData.city) {
+      toast.error('Veuillez compléter votre adresse');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -123,6 +142,9 @@ export default function RegisterPage() {
         whatsapp: data.whatsapp,
         full_name: data.full_name,
         profile_photo: profilePhoto,
+        country_code: addressData.country_code,
+        city: addressData.city,
+        address: addressData.address || '',
         desired_tontine_type: data.desired_tontine_type as 'classique' | 'flexible' | 'terme' | undefined,
         desired_mise: data.desired_mise ? parseFloat(data.desired_mise) : undefined,
         desired_objective: data.desired_objective,
@@ -345,6 +367,13 @@ export default function RegisterPage() {
                   </label>
                 </div>
 
+                <AddressSelector
+                  value={addressData}
+                  onChange={(address) => setAddressData(address)}
+                  required
+                  error={!addressData.country_code && tontinierForm.formState.isSubmitted ? 'Adresse requise' : undefined}
+                />
+
                 <Button type="submit" fullWidth size="lg" isLoading={isSubmitting}>
                   Soumettre ma demande
                 </Button>
@@ -403,6 +432,13 @@ export default function RegisterPage() {
                     />
                   </label>
                 </div>
+
+                <AddressSelector
+                  value={addressData}
+                  onChange={(address) => setAddressData(address)}
+                  required
+                  error={!addressData.country_code && clientForm.formState.isSubmitted ? 'Adresse requise' : undefined}
+                />
 
                 <Select
                   label="Type de tontine souhaitée (optionnel)"
