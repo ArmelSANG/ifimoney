@@ -261,6 +261,7 @@ export const tontinierNavItems: NavItem[] = [
   { label: 'Mes clients', href: '/tontinier/clients', icon: <Users className="w-5 h-5" /> },
   { label: 'Mes tontines', href: '/tontinier/tontines', icon: <Wallet className="w-5 h-5" /> },
   { label: 'Transactions', href: '/tontinier/transactions', icon: <FileText className="w-5 h-5" /> },
+  { label: 'Mes bénéfices', href: '/tontinier/earnings', icon: <CircleDollarSign className="w-5 h-5" /> },
   { label: 'Mon compte', href: '/tontinier/account', icon: <Clock className="w-5 h-5" /> },
   { label: 'Paramètres', href: '/tontinier/settings', icon: <Settings className="w-5 h-5" /> },
 ];

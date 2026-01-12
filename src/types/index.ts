@@ -388,3 +388,6 @@ export const ADMIN_CONTACT = {
 
 // Export des types de chat
 export * from './chat';
+
+// Export des types de fonctionnalités
+export * from './features';

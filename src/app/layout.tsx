@@ -16,6 +16,12 @@ export const metadata: Metadata = {
   keywords: ['tontine', 'épargne', 'fintech', 'Afrique', 'Bénin', 'mobile money', 'ifiMoney'],
   authors: [{ name: 'IFIAAS' }],
   manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    apple: '/icons/icon-192x192.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',

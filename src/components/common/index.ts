@@ -34,3 +34,7 @@ export { ChatWidget } from './ChatWidget';
 export { ChatList } from './ChatList';
 export { ChatWindow } from './ChatWindow';
 export { ChatMessage } from './ChatMessage';
+
+export { AddressSelector } from './AddressSelector';
+export { PhoneInput } from './PhoneInput';
+export { TransactionSummaryModal } from './TransactionSummaryModal';

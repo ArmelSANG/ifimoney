@@ -6,3 +6,6 @@ export { transactionService } from './transaction';
 export { userService } from './user';
 export { notificationService } from './notifications';
 export { chatService } from './chat';
+export { locationService } from './location';
+export { earningsService } from './earnings';
+export { imageService } from './image';
